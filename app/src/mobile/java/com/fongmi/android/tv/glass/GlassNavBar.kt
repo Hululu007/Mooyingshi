@@ -7,11 +7,11 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.compose.foundation.Image
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -54,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.backdrops.rememberCanvasBackdrop
 import com.kyant.shapes.Capsule
+import kotlinx.coroutines.withTimeoutOrNull
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -226,6 +231,20 @@ fun GlassNavBarContent(state: GlassNavState) {
 
     var barWidthPx by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
+    // Pill position in px: springs to the selected item on taps, and is snapped
+    // directly by the drag gesture so the pill follows the finger.
+    val pillAnim = remember { Animatable(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    val selectedIndex = state.items.indexOfFirst { it.id == state.selectedId }
+    val buttonWidthPx = if (state.items.isNotEmpty() && barWidthPx > 0) barWidthPx / state.items.size else 0
+    LaunchedEffect(selectedIndex, buttonWidthPx) {
+        if (!dragging && selectedIndex >= 0 && buttonWidthPx > 0) {
+            pillAnim.animateTo(
+                (buttonWidthPx * selectedIndex).toFloat(),
+                spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+            )
+        }
+    }
     Box(Modifier.fillMaxSize()) {
         // The glass element IS the bar itself: the lens effect only accepts a
         // RoundedRectangularShape (e.g. Capsule), which describes the element's
@@ -263,22 +282,19 @@ fun GlassNavBarContent(state: GlassNavState) {
                     ),
                     shape = Capsule()
                 )
+                .glassBarGestures(state, pillAnim, { dragging = it }) {
+                    if (state.items.isEmpty() || barWidthPx <= 0) 0 to 0
+                    else state.items.size to barWidthPx / state.items.size
+                }
         ) {
-            // One selection pill that glides to the tapped item (liquid motion),
-            // instead of a static highlight painted per button.
-            val selectedIndex = state.items.indexOfFirst { it.id == state.selectedId }
-            if (selectedIndex >= 0 && barWidthPx > 0 && state.items.isNotEmpty()) {
-                val buttonWidth = with(density) { (barWidthPx / state.items.size).toDp() }
-                val pillX by animateDpAsState(
-                    targetValue = buttonWidth * selectedIndex,
-                    animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-                    label = "glassPill"
-                )
+            // One selection pill: springs to the tapped item, and while the
+            // finger drags across the bar it follows the finger in real time.
+            if (barWidthPx > 0 && state.items.isNotEmpty() && (selectedIndex >= 0 || dragging)) {
                 Box(
                     Modifier
                         .align(Alignment.CenterStart)
-                        .offset(x = pillX)
-                        .width(buttonWidth)
+                        .offset(x = with(density) { pillAnim.value.toDp() })
+                        .width(with(density) { buttonWidthPx.toDp() })
                         .height(52.dp)
                         .padding(horizontal = 4.dp)
                         .background(Color(state.accentColor).copy(alpha = 0.22f), RoundedCornerShape(26.dp))
@@ -320,13 +336,7 @@ private fun GlassNavButton(
         modifier
             .height(52.dp)
             .padding(horizontal = 4.dp)
-            .clip(RoundedCornerShape(26.dp))
-            .combinedClickable(
-                onClick = { state.listener?.onSelect(item.id) },
-                onLongClick = if (item.liveItem) {
-                    { state.listener?.onLiveLongPress() }
-                } else null
-            ),
+            .clip(RoundedCornerShape(26.dp)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -358,6 +368,70 @@ private fun GlassNavButton(
                 style = TextStyle(color = contentColor, fontSize = 10.sp),
                 modifier = Modifier.padding(top = 2.dp)
             )
+        }
+    }
+}
+
+/**
+ * Unified tap / long-press / horizontal-drag input for the whole glass bar.
+ *
+ * A tap selects the item under the finger; holding the live item still for
+ * 500 ms fires the live-shortcut long press; dragging horizontally snaps the
+ * selection pill to the finger position in real time and selects the item
+ * under the finger when it is released.
+ */
+private fun Modifier.glassBarGestures(
+    state: GlassNavState,
+    pillAnim: Animatable<Float, AnimationVector1D>,
+    onDraggingChange: (Boolean) -> Unit,
+    metrics: () -> Pair<Int, Int>
+): Modifier = pointerInput(state) {
+    awaitPointerEventScope {
+        while (true) {
+            val down = awaitPointerEvent().changes.firstOrNull { it.changedToDown() } ?: continue
+            val (count, bw) = metrics()
+            if (count <= 0 || bw <= 0) continue
+            val items = state.items
+            if (items.size != count) continue
+            val startIndex = (down.position.x / bw).toInt().coerceIn(0, count - 1)
+            val startItem = items[startIndex]
+            down.consume()
+            var draggingNow = false
+            var longPressed = false
+            var finished = false
+            while (!finished) {
+                val event = if (draggingNow || longPressed) {
+                    awaitPointerEvent()
+                } else {
+                    withTimeoutOrNull(500L) { awaitPointerEvent() }
+                }
+                if (event == null) {
+                    longPressed = true
+                    if (startItem.liveItem) state.listener?.onLiveLongPress()
+                    continue
+                }
+                val change = event.changes.firstOrNull { it.id == down.id } ?: continue
+                when {
+                    change.changedToUp() -> {
+                        change.consume()
+                        if (!longPressed) {
+                            val endIndex = if (draggingNow) (change.position.x / bw).toInt().coerceIn(0, count - 1) else startIndex
+                            state.listener?.onSelect(items[endIndex].id)
+                        }
+                        if (draggingNow) onDraggingChange(false)
+                        finished = true
+                    }
+                    change.pressed -> {
+                        if (!draggingNow && kotlin.math.abs(change.position.x - down.position.x) > viewConfiguration.touchSlop) {
+                            draggingNow = true
+                            onDraggingChange(true)
+                        }
+                        if (draggingNow) {
+                            pillAnim.snapTo((change.position.x - bw / 2f).coerceIn(0f, (bw * (count - 1)).toFloat()))
+                        }
+                    }
+                }
+            }
         }
     }
 }
