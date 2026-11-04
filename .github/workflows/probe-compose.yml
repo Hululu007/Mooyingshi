@@ -2,6 +2,15 @@ name: Probe Compose Toolchain
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/liquid-glass
+    paths:
+      - ".github/workflows/probe-compose.yml"
+      - "app/src/mobile/java/com/fongmi/android/tv/glass/**"
+      - "app/build.gradle"
+      - "build.gradle"
+      - "gradle/libs.versions.toml"
 
 permissions:
   contents: read
