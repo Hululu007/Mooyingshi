@@ -10,6 +10,26 @@
       "quickSearch": 1,
       "filterable": 0,
       "changeable": 0
+    },
+    {
+      "key": "archive_js",
+      "name": "Archive·JS蜘蛛",
+      "type": 3,
+      "api": "https://raw.githubusercontent.com/xinyonghuu/Mooyingshi/main/config/spiders/archive_org.js",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1,
+      "changeable": 0
+    },
+    {
+      "key": "archive_py",
+      "name": "Archive·PY蜘蛛",
+      "type": 3,
+      "api": "https://raw.githubusercontent.com/xinyonghuu/Mooyingshi/main/config/spiders/archive_org.py",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1,
+      "changeable": 0
     }
   ],
   "parses": [],
