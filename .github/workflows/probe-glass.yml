@@ -14,16 +14,18 @@ jobs:
         with:
           python-version: '3.10'
       - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install Android packages
         run: |
-          SDK=${ANDROID_SDK_ROOT:-$ANDROID_HOME}
-          echo "sdk.dir=$SDK" > local.properties
-          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses >/dev/null 2>&1 || true
-          "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" "platform-tools"
-          curl -sL -o /tmp/p37.zip "https://dl.google.com/android/repository/platform-37_r02.zip"
-          rm -rf "$SDK/platforms/android-37"
-          unzip -q /tmp/p37.zip -d /tmp/p37
-          mv /tmp/p37/android-37 "$SDK/platforms/android-37"
-          sed -i 's/AndroidVersion.ApiLevel=36/AndroidVersion.ApiLevel=37/' "$SDK/platforms/android-37/source.properties" 2>/dev/null || true
-          cat "$SDK/platforms/android-37/source.properties" | head -12
+          sdkmanager "platform-tools" "platforms;android-28" "build-tools;36.0.0"
+          curl -fsSL -o /tmp/platform-37.zip https://dl.google.com/android/repository/platform-37.0_r01.zip
+          rm -rf /tmp/platform-37 "$ANDROID_HOME/platforms/android-37"
+          mkdir -p /tmp/platform-37 "$ANDROID_HOME/platforms"
+          unzip -q /tmp/platform-37.zip -d /tmp/platform-37
+          platform_jar="$(find /tmp/platform-37 -name android.jar -print -quit)"
+          test -n "$platform_jar"
+          mv "$(dirname "$platform_jar")" "$ANDROID_HOME/platforms/android-37"
       - name: Assemble mobile arm64 debug
         run: ./gradlew :app:assembleMobileArm64_v8aDebug --stacktrace
