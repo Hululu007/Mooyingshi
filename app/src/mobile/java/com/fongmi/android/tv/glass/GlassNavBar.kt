@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -235,6 +236,7 @@ fun GlassNavBarContent(state: GlassNavState) {
     // Pill position in px: springs to the selected item on taps, and is snapped
     // directly by the drag gesture so the pill follows the finger.
     val pillAnim = remember { Animatable(0f) }
+    val gestureScope = rememberCoroutineScope()
     var dragging by remember { mutableStateOf(false) }
     val selectedIndex = state.items.indexOfFirst { it.id == state.selectedId }
     val buttonWidthPx = if (state.items.isNotEmpty() && barWidthPx > 0) barWidthPx / state.items.size else 0
@@ -283,7 +285,7 @@ fun GlassNavBarContent(state: GlassNavState) {
                     ),
                     shape = Capsule()
                 )
-                .glassBarGestures(state, pillAnim, { dragging = it }) {
+                .glassBarGestures(state, pillAnim, gestureScope, { dragging = it }) {
                     if (state.items.isEmpty() || barWidthPx <= 0) 0 to 0
                     else state.items.size to barWidthPx / state.items.size
                 }
@@ -384,10 +386,10 @@ private fun GlassNavButton(
 private fun Modifier.glassBarGestures(
     state: GlassNavState,
     pillAnim: Animatable<Float, AnimationVector1D>,
+    scope: kotlinx.coroutines.CoroutineScope,
     onDraggingChange: (Boolean) -> Unit,
     metrics: () -> Pair<Int, Int>
 ): Modifier = pointerInput(state) {
-    val scope = this
     awaitPointerEventScope {
         while (true) {
             val down = awaitPointerEvent().changes.firstOrNull { it.changedToDown() } ?: continue
