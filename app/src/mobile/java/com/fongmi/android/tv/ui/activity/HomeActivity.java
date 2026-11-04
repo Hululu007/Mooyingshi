@@ -322,10 +322,8 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
             mBinding.navigation.setVisibility(View.GONE);
         }
         mBinding.container.setLayoutParams(params);
-        // While the glass bar floats over the content, pad the container so the
-        // last rows of scrollable pages can clear the bar; remove when it hides.
-        int glassPad = glass && show ? Math.round(88 * getResources().getDisplayMetrics().density) : 0;
-        if (mBinding.container.getPaddingBottom() != glassPad) mBinding.container.setPadding(0, 0, 0, glassPad);
+        // Container bottom padding for the floating glass bar is owned by
+        // WebHomeChromeController.applyLayout(); just trigger an insets pass.
         mBinding.getRoot().requestApplyInsets();
         syncGlassState();
     }
