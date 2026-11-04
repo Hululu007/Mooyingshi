@@ -58,6 +58,12 @@ class GlassNavState {
     var darkMode: Boolean by mutableStateOf(true)
     var accentColor: Int by mutableIntStateOf(0xFFBB86FC.toInt())
 
+    // Liquid glass effect parameters, synced from Setting by HomeActivity.
+    var glassBlurDp: Float by mutableStateOf(5f)
+    var glassDistortionDp: Float by mutableStateOf(30f)
+    var glassTranslucency: Float by mutableStateOf(0.5f)
+    var glassDispersion: Boolean by mutableStateOf(true)
+
     // Draw-phase state: read only inside the backdrop draw lambda so per-frame
     // captures invalidate drawing without triggering recomposition.
     var stripImage: ImageBitmap? by mutableStateOf(null)
@@ -200,19 +206,17 @@ fun GlassNavBarContent(state: GlassNavState) {
             liveItem = item.liveItem
         )
     }
-    // AVBox's tuned defaults (LiquidGlassState): blur 5dp, distortion 30dp,
-    // translucency 0.5, dispersion on. The bar only exists when the liquid
-    // glass toggle is on, so navbarEnabled is always true here.
-    val config = remember {
-        LiquidGlassConfig(
-            navbarEnabled = true,
-            controlsEnabled = true,
-            blurDp = 5f,
-            distortionDp = 30f,
-            translucency = 0.5f,
-            dispersion = true
-        )
-    }
+    // Effect parameters come from the user's settings (synced into the state
+    // by HomeActivity); defaults match AVBox's LiquidGlassState. The bar only
+    // exists when the liquid glass toggle is on, so navbarEnabled is true.
+    val config = LiquidGlassConfig(
+        navbarEnabled = true,
+        controlsEnabled = true,
+        blurDp = state.glassBlurDp,
+        distortionDp = state.glassDistortionDp,
+        translucency = state.glassTranslucency,
+        dispersion = state.glassDispersion
+    )
     val selectedTabIndex = remember(state) {
         { state.items.indexOfFirst { it.id == state.selectedId }.coerceAtLeast(0) }
     }

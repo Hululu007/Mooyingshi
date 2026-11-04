@@ -376,6 +376,10 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         com.google.android.material.badge.BadgeDrawable badge = mBinding.navigation.getBadge(R.id.following);
         glassState.setFollowingBadge(badge == null ? 0 : badge.getNumber());
         boolean night = (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        glassState.setGlassBlurDp(Setting.getGlassBlur());
+        glassState.setGlassDistortionDp(Setting.getGlassDistortion());
+        glassState.setGlassTranslucency(Setting.getGlassTranslucency() / 100f);
+        glassState.setGlassDispersion(Setting.isGlassDispersion());
         glassState.setDarkMode(night);
         android.util.TypedValue value = new android.util.TypedValue();
         if (getTheme().resolveAttribute(android.R.attr.colorPrimary, value, true)) glassState.setAccentColor(value.data);

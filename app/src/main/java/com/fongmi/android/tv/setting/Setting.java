@@ -412,6 +412,39 @@ public class Setting {
         Prefers.put("liquid_glass", enabled);
     }
 
+    public static int getGlassBlur() {
+        return Math.max(0, Math.min(40, Prefers.getInt("liquid_glass_blur", 5)));
+    }
+
+    public static void putGlassBlur(int blur) {
+        Prefers.put("liquid_glass_blur", Math.max(0, Math.min(40, blur)));
+    }
+
+    public static int getGlassDistortion() {
+        return Math.max(0, Math.min(30, Prefers.getInt("liquid_glass_distortion", 30)));
+    }
+
+    public static void putGlassDistortion(int distortion) {
+        Prefers.put("liquid_glass_distortion", Math.max(0, Math.min(30, distortion)));
+    }
+
+    /** Translucency in percent (0-100), mirroring AVBox's 0.0-1.0 setting. */
+    public static int getGlassTranslucency() {
+        return Math.max(0, Math.min(100, Prefers.getInt("liquid_glass_translucency", 50)));
+    }
+
+    public static void putGlassTranslucency(int percent) {
+        Prefers.put("liquid_glass_translucency", Math.max(0, Math.min(100, percent)));
+    }
+
+    public static boolean isGlassDispersion() {
+        return Prefers.getBoolean("liquid_glass_dispersion", true);
+    }
+
+    public static void putGlassDispersion(boolean enabled) {
+        Prefers.put("liquid_glass_dispersion", enabled);
+    }
+
     public static boolean isTouchOptimized() {
         return Util.isLeanback() && Prefers.getBoolean("touch_optimized");
     }

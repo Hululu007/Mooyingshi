@@ -92,6 +92,11 @@ public class SettingPersonalFragment extends BaseFragment {
         mBinding.appBranding.setOnClickListener(this::startAppBranding);
         mBinding.touchOptimization.setOnClickListener(this::setTouchOptimization);
         mBinding.liquidGlass.setOnClickListener(this::setLiquidGlass);
+        mBinding.glassBlur.setOnClickListener(this::setGlassBlur);
+        mBinding.glassDistortion.setOnClickListener(this::setGlassDistortion);
+        mBinding.glassTranslucency.setOnClickListener(this::setGlassTranslucency);
+        mBinding.glassDispersion.setOnClickListener(this::setGlassDispersion);
+        mBinding.glassReset.setOnClickListener(this::resetGlass);
     }
 
     private void setText() {
@@ -112,6 +117,10 @@ public class SettingPersonalFragment extends BaseFragment {
         mBinding.appBrandingText.setText(AppBranding.getSummary(requireContext()));
         mBinding.touchOptimizationText.setText(getSwitch(Setting.isTouchOptimized()));
         mBinding.liquidGlassText.setText(getSwitch(Setting.isLiquidGlass()));
+        mBinding.glassBlurText.setText(String.valueOf(Setting.getGlassBlur()));
+        mBinding.glassDistortionText.setText(String.valueOf(Setting.getGlassDistortion()));
+        mBinding.glassTranslucencyText.setText(Setting.getGlassTranslucency() + "%");
+        mBinding.glassDispersionText.setText(getSwitch(Setting.isGlassDispersion()));
     }
 
     private String getSearchColumnText() {
@@ -248,6 +257,45 @@ public class SettingPersonalFragment extends BaseFragment {
 
     private void setLiquidGlass(View view) {
         Setting.putLiquidGlass(!Setting.isLiquidGlass());
+        ConfigEvent.common();
+        setText();
+    }
+
+    private void setGlassBlur(View view) {
+        SliderNumberDialog.show(requireActivity(), R.string.setting_glass_blur, Setting.getGlassBlur(), 0, 40, value -> {
+            Setting.putGlassBlur(value);
+            ConfigEvent.common();
+            setText();
+        });
+    }
+
+    private void setGlassDistortion(View view) {
+        SliderNumberDialog.show(requireActivity(), R.string.setting_glass_distortion, Setting.getGlassDistortion(), 0, 30, value -> {
+            Setting.putGlassDistortion(value);
+            ConfigEvent.common();
+            setText();
+        });
+    }
+
+    private void setGlassTranslucency(View view) {
+        SliderNumberDialog.show(requireActivity(), R.string.setting_glass_translucency, Setting.getGlassTranslucency(), 0, 100, value -> {
+            Setting.putGlassTranslucency(value);
+            ConfigEvent.common();
+            setText();
+        });
+    }
+
+    private void setGlassDispersion(View view) {
+        Setting.putGlassDispersion(!Setting.isGlassDispersion());
+        ConfigEvent.common();
+        setText();
+    }
+
+    private void resetGlass(View view) {
+        Setting.putGlassBlur(5);
+        Setting.putGlassDistortion(30);
+        Setting.putGlassTranslucency(50);
+        Setting.putGlassDispersion(true);
         ConfigEvent.common();
         setText();
     }
