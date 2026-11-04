@@ -1,0 +1,41 @@
+name: Probe Compose build
+
+on:
+  push:
+    branches: [hotfix/glass-capsule]
+    paths:
+      - ".github/workflows/probe-compose.yml"
+      - "app/src/**"
+      - "app/build.gradle"
+      - "build.gradle"
+      - "gradle/libs.versions.toml"
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: |
+          sdkmanager --install "platforms;android-37" "build-tools;37.0.0" "ndk;29.0.14206865" 2>/dev/null || \
+          sdkmanager --install "platforms;android-37" "build-tools;37.0.0"
+
+      - name: Assemble mobile debug APK
+        run: ./gradlew :app:assembleMobileArm64_v8aDebug --no-daemon

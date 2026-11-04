@@ -26,15 +26,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -46,6 +41,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.backdrops.rememberCanvasBackdrop
+import com.kyant.shapes.Capsule
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -180,41 +176,46 @@ class GlassBackdropCapture(
     }
 }
 
-/** Shape of the floating bar: an inset rounded rect inside the full slot. */
-private object BarShape : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val insetX = with(density) { 16.dp.toPx() }
-        val bottom = with(density) { 10.dp.toPx() }
-        val barHeight = with(density) { 64.dp.toPx() }
-        val rect = Rect(
-            left = insetX,
-            top = size.height - bottom - barHeight,
-            right = size.width - insetX,
-            bottom = size.height - bottom
-        )
-        return Outline.Rounded(RoundRect(rect, CornerRadius(barHeight / 2f)))
-    }
-}
+// Geometry of the floating bar inside the 88dp glass slot (see activity_home.xml):
+// 16dp side insets, 10dp above the slot's bottom edge, 64dp tall, so its top edge
+// sits 14dp below the slot's top edge.
+private val BarInsetX = 16.dp
+private val BarTopInSlot = 14.dp
 
 @Composable
 fun GlassNavBarContent(state: GlassNavState) {
+    // The backdrop is drawn in the bar element's own coordinate space, so the
+    // captured strip (published relative to the whole slot) is shifted by the
+    // bar's inset within the slot.
     val backdrop = rememberCanvasBackdrop {
         val image = state.stripImage
         if (image != null) {
-            drawImage(image, dstOffset = state.stripOffset)
+            drawImage(
+                image,
+                dstOffset = IntOffset(
+                    state.stripOffset.x - BarInsetX.toPx().toInt(),
+                    state.stripOffset.y - BarTopInSlot.toPx().toInt()
+                )
+            )
         } else {
             drawRect(state.fallbackColor)
         }
     }
 
     Box(Modifier.fillMaxSize()) {
-        // Glass surface: backdrop effects clipped to the floating bar shape.
+        // The glass element IS the bar itself: the lens effect only accepts a
+        // RoundedRectangularShape (e.g. Capsule), which describes the element's
+        // own bounds, so an inset shape drawn on a full-size element crashes.
         Box(
             Modifier
-                .fillMaxSize()
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = BarInsetX)
+                .padding(bottom = 10.dp)
+                .fillMaxWidth()
+                .height(64.dp)
                 .drawBackdrop(
                     backdrop = backdrop,
-                    shape = { BarShape },
+                    shape = { Capsule() },
                     effects = {
                         vibrancy()
                         blur(6f.dp.toPx())
@@ -227,26 +228,20 @@ fun GlassNavBarContent(state: GlassNavState) {
                         )
                     }
                 )
-        )
-
-        // Tab buttons, laid out over the bar's rect.
-        Row(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 10.dp)
-                .height(64.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            state.items.forEach { item ->
-                GlassNavButton(
-                    item = item,
-                    selected = item.id == state.selectedId,
-                    badge = if (item.id == state.followingId) state.followingBadge else 0,
-                    state = state,
-                    modifier = Modifier.weight(1f)
-                )
+            Row(
+                Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                state.items.forEach { item ->
+                    GlassNavButton(
+                        item = item,
+                        selected = item.id == state.selectedId,
+                        badge = if (item.id == state.followingId) state.followingBadge else 0,
+                        state = state,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
