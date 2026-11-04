@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.backdrops.rememberCanvasBackdrop
 import com.kyant.shapes.Capsule
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -386,6 +387,7 @@ private fun Modifier.glassBarGestures(
     onDraggingChange: (Boolean) -> Unit,
     metrics: () -> Pair<Int, Int>
 ): Modifier = pointerInput(state) {
+    val scope = this
     awaitPointerEventScope {
         while (true) {
             val down = awaitPointerEvent().changes.firstOrNull { it.changedToDown() } ?: continue
@@ -427,7 +429,8 @@ private fun Modifier.glassBarGestures(
                             onDraggingChange(true)
                         }
                         if (draggingNow) {
-                            pillAnim.snapTo((change.position.x - bw / 2f).coerceIn(0f, (bw * (count - 1)).toFloat()))
+                            val target = (change.position.x - bw / 2f).coerceIn(0f, (bw * (count - 1)).toFloat())
+                            scope.launch { pillAnim.snapTo(target) }
                         }
                     }
                 }
