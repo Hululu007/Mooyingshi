@@ -3,9 +3,14 @@ package com.fongmi.android.tv.glass
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.compose.foundation.Image
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,8 +18,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -22,16 +29,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -98,20 +110,20 @@ object GlassNav {
     }
 
     @JvmStatic
-    fun createCapture(source: View, anchor: View, state: GlassNavState): GlassBackdropCapture {
+    fun createCapture(source: ViewGroup, anchor: View, state: GlassNavState): GlassBackdropCapture {
         return GlassBackdropCapture(source, anchor, state)
     }
 }
 
 /**
- * Captures the bottom strip of [source] (the fragment container) before each draw
+ * Captures the bottom strip of [source] (the home root layout) before each draw
  * and publishes it as the backdrop image for the glass bar.
  *
  * The captured strip covers the glass slot plus an extra margin above it, so the
  * blur/lens effects have real content to sample at the bar's top edge.
  */
 class GlassBackdropCapture(
-    private val source: View,
+    private val source: ViewGroup,
     private val anchor: View,
     private val state: GlassNavState
 ) {
@@ -153,7 +165,17 @@ class GlassBackdropCapture(
             bmp.eraseColor(android.graphics.Color.TRANSPARENT)
             c.save()
             c.translate(0f, -(sourceHeight - stripHeight).toFloat())
-            source.draw(c)
+            // Draw every visible child except the glass bar itself (the anchor):
+            // sampling the bar would feed the glass back into its own backdrop.
+            source.background?.draw(c)
+            for (i in 0 until source.childCount) {
+                val child = source.getChildAt(i)
+                if (child === anchor || child.visibility != View.VISIBLE) continue
+                c.save()
+                c.translate(child.left.toFloat(), child.top.toFloat())
+                child.draw(c)
+                c.restore()
+            }
             c.restore()
         } catch (e: Exception) {
             return
@@ -202,6 +224,8 @@ fun GlassNavBarContent(state: GlassNavState) {
         }
     }
 
+    var barWidthPx by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
     Box(Modifier.fillMaxSize()) {
         // The glass element IS the bar itself: the lens effect only accepts a
         // RoundedRectangularShape (e.g. Capsule), which describes the element's
@@ -213,22 +237,53 @@ fun GlassNavBarContent(state: GlassNavState) {
                 .padding(bottom = 10.dp)
                 .fillMaxWidth()
                 .height(64.dp)
+                .onSizeChanged { barWidthPx = it.width }
+                .shadow(elevation = 18.dp, shape = Capsule(), ambientColor = Color.Black.copy(alpha = 0.20f), spotColor = Color.Black.copy(alpha = 0.24f))
                 .drawBackdrop(
                     backdrop = backdrop,
                     shape = { Capsule() },
                     effects = {
                         vibrancy()
-                        blur(6f.dp.toPx())
-                        lens(18f.dp.toPx(), 36f.dp.toPx())
+                        blur(4f.dp.toPx())
+                        lens(24f.dp.toPx(), 48f.dp.toPx(), depthEffect = true, chromaticAberration = true)
                     },
                     onDrawSurface = {
                         drawRect(
-                            if (state.darkMode) Color.Black.copy(alpha = 0.30f)
-                            else Color.White.copy(alpha = 0.35f)
+                            if (state.darkMode) Color.Black.copy(alpha = 0.16f)
+                            else Color.White.copy(alpha = 0.18f)
                         )
                     }
                 )
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.38f),
+                        0.45f to Color.White.copy(alpha = 0.10f),
+                        1f to Color.White.copy(alpha = 0.04f)
+                    ),
+                    shape = Capsule()
+                )
         ) {
+            // One selection pill that glides to the tapped item (liquid motion),
+            // instead of a static highlight painted per button.
+            val selectedIndex = state.items.indexOfFirst { it.id == state.selectedId }
+            if (selectedIndex >= 0 && barWidthPx > 0 && state.items.isNotEmpty()) {
+                val buttonWidth = with(density) { (barWidthPx / state.items.size).toDp() }
+                val pillX by animateDpAsState(
+                    targetValue = buttonWidth * selectedIndex,
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+                    label = "glassPill"
+                )
+                Box(
+                    Modifier
+                        .align(Alignment.CenterStart)
+                        .offset(x = pillX)
+                        .width(buttonWidth)
+                        .height(52.dp)
+                        .padding(horizontal = 4.dp)
+                        .background(Color(state.accentColor).copy(alpha = 0.22f), RoundedCornerShape(26.dp))
+                )
+            }
             Row(
                 Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically
@@ -266,7 +321,6 @@ private fun GlassNavButton(
             .height(52.dp)
             .padding(horizontal = 4.dp)
             .clip(RoundedCornerShape(26.dp))
-            .background(if (selected) accent.copy(alpha = 0.22f) else Color.Transparent)
             .combinedClickable(
                 onClick = { state.listener?.onSelect(item.id) },
                 onLongClick = if (item.liveItem) {
