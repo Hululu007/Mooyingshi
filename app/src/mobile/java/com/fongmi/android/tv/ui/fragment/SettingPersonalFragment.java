@@ -78,6 +78,7 @@ public class SettingPersonalFragment extends BaseFragment {
         mBinding.resetApp.setOnClickListener(this::showResetAppDialog);
         mBinding.appBranding.setOnClickListener(this::startAppBranding);
         mBinding.touchOptimization.setOnClickListener(this::setTouchOptimization);
+        mBinding.liquidGlass.setOnClickListener(this::setLiquidGlass);
     }
 
     private void setText() {
@@ -97,6 +98,7 @@ public class SettingPersonalFragment extends BaseFragment {
         mBinding.searchResultSortText.setText((searchResultSort = getResources().getStringArray(R.array.select_search_result_sort))[Setting.getSearchResultSort()]);
         mBinding.appBrandingText.setText(AppBranding.getSummary(requireContext()));
         mBinding.touchOptimizationText.setText(getSwitch(Setting.isTouchOptimized()));
+        mBinding.liquidGlassText.setText(getSwitch(Setting.isLiquidGlass()));
     }
 
     private String getSearchColumnText() {
@@ -229,6 +231,12 @@ public class SettingPersonalFragment extends BaseFragment {
         boolean enabled = !Setting.isTouchOptimized();
         Setting.putTouchOptimized(enabled);
         mBinding.touchOptimizationText.setText(getSwitch(enabled));
+    }
+
+    private void setLiquidGlass(View view) {
+        Setting.putLiquidGlass(!Setting.isLiquidGlass());
+        ConfigEvent.common();
+        setText();
     }
 
     private void resetApp() {

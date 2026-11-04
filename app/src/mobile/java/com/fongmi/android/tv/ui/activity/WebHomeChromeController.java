@@ -32,6 +32,8 @@ final class WebHomeChromeController {
 
         boolean isWebHomeChromeActive();
 
+        boolean isGlassBottomBarActive();
+
         void onWebHomeChromeChanged(String mode);
 
         void onWebHomeViewportChanged(WebHomeViewport viewport);
@@ -177,7 +179,7 @@ final class WebHomeChromeController {
     private void applyLayout() {
         boolean active = isActive();
         boolean normal = !active || WebHomeChrome.NORMAL.equals(mode);
-        binding.navigation.setVisibility(normal ? View.VISIBLE : View.GONE);
+        binding.navigation.setVisibility(normal && !host.isGlassBottomBarActive() ? View.VISIBLE : View.GONE);
         WebHomeViewport current = buildViewport();
         int top = normal ? current.getSafeTop() : 0;
         int bottom = normal ? current.getSafeBottom() : 0;

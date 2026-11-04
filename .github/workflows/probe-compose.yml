@@ -7,7 +7,7 @@ on:
       - feature/liquid-glass
     paths:
       - ".github/workflows/probe-compose.yml"
-      - "app/src/mobile/java/com/fongmi/android/tv/glass/**"
+      - "app/src/**"
       - "app/build.gradle"
       - "build.gradle"
       - "gradle/libs.versions.toml"
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   probe:
-    name: Compile mobile debug Kotlin
+    name: Assemble mobile debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -56,4 +56,4 @@ jobs:
       - name: Compile probe
         run: |
           chmod +x ./gradlew
-          ./gradlew :app:compileMobileArm64_v8aDebugKotlin --no-daemon
+          ./gradlew :app:assembleMobileArm64_v8aDebug --no-daemon

@@ -400,6 +400,14 @@ public class Setting {
         Prefers.put("incognito", incognito);
     }
 
+    public static boolean isLiquidGlass() {
+        return Prefers.getBoolean("liquid_glass", true);
+    }
+
+    public static void putLiquidGlass(boolean enabled) {
+        Prefers.put("liquid_glass", enabled);
+    }
+
     public static boolean isTouchOptimized() {
         return Util.isLeanback() && Prefers.getBoolean("touch_optimized");
     }
