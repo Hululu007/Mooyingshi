@@ -7,7 +7,23 @@
     <!-- Nav -->
     <string name="nav_vod">Vod</string>
     <string name="nav_live">Live</string>
+    <string name="nav_drama">Drama</string>
     <string name="nav_setting">Setting</string>
+
+    <!-- Short drama section -->
+    <string name="drama_recommend">Recommend</string>
+    <string name="drama_theater">Theater</string>
+    <string name="drama_history">History</string>
+    <string name="drama_home">Home</string>
+    <string name="drama_detail">Details</string>
+    <string name="drama_episodes">Episodes</string>
+    <string name="drama_source_title">Choose drama source</string>
+    <string name="drama_source_count">%1$d sources</string>
+    <string name="drama_empty">No short-drama sources in this config</string>
+    <string name="drama_no_content">No dramas from this source yet</string>
+    <string name="drama_load_failed">Failed to load, tap to retry</string>
+    <string name="drama_need_parse">This drama needs parsing — open Details to watch</string>
+    <string name="drama_episode_meta">Episode %1$d | %2$d episodes in total</string>
 
     <!-- Menu -->
     <string name="menu_sync">Sync</string>

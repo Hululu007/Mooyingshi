@@ -25,6 +25,7 @@ import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.databinding.ActivityHomeBinding;
 import com.fongmi.android.tv.db.AppDatabase;
+import com.fongmi.android.tv.drama.DramaSites;
 import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.event.ServerEvent;
@@ -135,7 +136,8 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
     protected void onResume() {
         super.onResume();
         if (mBinding.navigation.getMenu().findItem(R.id.lab).isVisible() != LabConfig.get().getNavEntry()
-                || mBinding.navigation.getMenu().findItem(R.id.following).isVisible() != FollowingSettings.isEnabled()) setNavigation();
+                || mBinding.navigation.getMenu().findItem(R.id.following).isVisible() != FollowingSettings.isEnabled()
+                || mBinding.navigation.getMenu().findItem(R.id.drama).isVisible() != DramaSites.hasDramaSites()) setNavigation();
         updateFollowingBadge();
     }
 
@@ -226,6 +228,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         return new Callback() {
             @Override
             public void success() {
+                setNavigation();
                 checkAction(getIntent());
             }
 
@@ -270,6 +273,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         mBinding.navigation.getMenu().findItem(R.id.vod).setVisible(true);
         mBinding.navigation.getMenu().findItem(R.id.setting).setVisible(true);
         mBinding.navigation.getMenu().findItem(R.id.lab).setVisible(LabConfig.get().getNavEntry());
+        mBinding.navigation.getMenu().findItem(R.id.drama).setVisible(DramaSites.hasDramaSites());
         mBinding.navigation.getMenu().findItem(R.id.live).setVisible(LiveConfig.hasUrl());
         mBinding.navigation.getMenu().findItem(R.id.following).setVisible(FollowingSettings.isEnabled());
         updateFollowingBadge();
@@ -367,6 +371,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         List<GlassNavItem> items = new ArrayList<>();
         addGlassItem(items, R.id.vod, R.drawable.ic_nav_vod, R.string.nav_vod, false);
         addGlassItem(items, R.id.live, R.drawable.ic_nav_live, R.string.nav_live, true);
+        addGlassItem(items, R.id.drama, R.drawable.ic_nav_drama, R.string.nav_drama, false);
         addGlassItem(items, R.id.following, R.drawable.ic_nav_following, R.string.nav_following, false);
         addGlassItem(items, R.id.lab, R.drawable.ic_nav_lab, R.string.app_lab, false);
         addGlassItem(items, R.id.setting, R.drawable.ic_nav_setting, R.string.nav_setting, false);
@@ -395,6 +400,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         switch (event.type()) {
             case VOD:
                 RefreshEvent.home();
+                setNavigation();
                 break;
             case COMMON:
                 setNavigation();
@@ -427,6 +433,10 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
             return false;
         }
         if (itemId == R.id.vod) return changeFragment(0);
+        if (itemId == R.id.drama) {
+            ShortDramaActivity.start(this);
+            return false;
+        }
         if (itemId == R.id.live) return openLive();
         if (itemId == R.id.following) {
             FollowingActivity.start(this, null);
