@@ -87,6 +87,7 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
     private PageHolder activeHolder;
     private int currentPage = -1;
     private int playToken;
+    private int loadRetry;
     private Mode mode = Mode.FEED;
     private int episodePosition = -1;
     private List<Episode> episodeList;
@@ -163,11 +164,23 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
 
             @Override
             public void onPlayerError(@NonNull PlaybackException error) {
-                if (activeHolder != null) {
-                    activeHolder.binding.pageLoading.setVisibility(View.GONE);
-                    activeHolder.binding.pageHint.setText(R.string.drama_load_failed);
-                    activeHolder.binding.pageHint.setVisibility(View.VISIBLE);
+                if (activeHolder == null) return;
+                // 播放地址本身没问题、只是网络抖了一下很常见：先自动重试一次，
+                // 还不行再显示“加载失败，点击重试”，点提示文字也可以再试一次。
+                if (loadRetry < 1 && currentPage >= 0 && currentPage < feed.size()) {
+                    loadRetry++;
+                    activeHolder.binding.pageLoading.setVisibility(View.VISIBLE);
+                    activeHolder.binding.pageHint.setVisibility(View.GONE);
+                    int position = currentPage;
+                    PageHolder holder = activeHolder;
+                    holder.binding.pageHint.postDelayed(() -> {
+                        if (position == currentPage && activeHolder == holder) playEpisode(position, playingEpisodeIndex);
+                    }, 800);
+                    return;
                 }
+                activeHolder.binding.pageLoading.setVisibility(View.GONE);
+                activeHolder.binding.pageHint.setText(R.string.drama_load_failed);
+                activeHolder.binding.pageHint.setVisibility(View.VISIBLE);
             }
         });
     }
@@ -275,6 +288,7 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
         Site site = current;
         if (site == null) return;
         int token = ++playToken;
+        loadRetry = 0;
         holder.binding.pageLoading.setVisibility(View.VISIBLE);
         holder.binding.pageHint.setVisibility(View.GONE);
         holder.binding.name.setText(vod.getName());
@@ -481,6 +495,7 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
             }
         }
         if (index < 0) return;
+        loadRetry = 0;
         playEpisode(episodePosition, index);
     }
 
@@ -501,6 +516,7 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
                 if (flag == null) return;
                 int next = playingEpisodeIndex + 1;
                 if (next < flag.getEpisodes().size()) {
+                    loadRetry = 0;
                     App.post(() -> playEpisode(position, next));
                 } else if (position + 1 < feed.size()) {
                     App.post(() -> {
@@ -645,6 +661,12 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
             binding.railKeep.setOnClickListener(view -> toggleKeep(holder.getBindingAdapterPosition()));
             binding.railDetail.setOnClickListener(view -> toggleContent(holder));
             binding.railEpisodes.setOnClickListener(view -> showEpisodes(holder.getBindingAdapterPosition()));
+            binding.pageHint.setOnClickListener(view -> {
+                int pos = holder.getBindingAdapterPosition();
+                if (pos < 0 || pos != currentPage) return;
+                loadRetry = 0;
+                playEpisode(pos, playingEpisodeIndex);
+            });
             binding.content.setOnClickListener(view -> toggleContent(holder));
             binding.name.setOnClickListener(view -> openDetail(holder.getBindingAdapterPosition()));
             return holder;
