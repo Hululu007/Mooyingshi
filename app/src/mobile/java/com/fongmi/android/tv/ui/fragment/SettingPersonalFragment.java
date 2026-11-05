@@ -92,6 +92,7 @@ public class SettingPersonalFragment extends BaseFragment {
         mBinding.appBranding.setOnClickListener(this::startAppBranding);
         mBinding.touchOptimization.setOnClickListener(this::setTouchOptimization);
         mBinding.liquidGlass.setOnClickListener(this::setLiquidGlass);
+        mBinding.dramaCollected.setOnClickListener(this::setShortDramaCollected);
         mBinding.glassBlur.setOnClickListener(this::setGlassBlur);
         mBinding.glassDistortion.setOnClickListener(this::setGlassDistortion);
         mBinding.glassTranslucency.setOnClickListener(this::setGlassTranslucency);
@@ -117,6 +118,7 @@ public class SettingPersonalFragment extends BaseFragment {
         mBinding.appBrandingText.setText(AppBranding.getSummary(requireContext()));
         mBinding.touchOptimizationText.setText(getSwitch(Setting.isTouchOptimized()));
         mBinding.liquidGlassText.setText(getSwitch(Setting.isLiquidGlass()));
+        mBinding.dramaCollectedText.setText(getSwitch(Setting.isShortDramaCollected()));
         mBinding.glassBlurText.setText(String.valueOf(Setting.getGlassBlur()));
         mBinding.glassDistortionText.setText(String.valueOf(Setting.getGlassDistortion()));
         mBinding.glassTranslucencyText.setText(Setting.getGlassTranslucency() + "%");
@@ -257,6 +259,12 @@ public class SettingPersonalFragment extends BaseFragment {
 
     private void setLiquidGlass(View view) {
         Setting.putLiquidGlass(!Setting.isLiquidGlass());
+        ConfigEvent.common();
+        setText();
+    }
+
+    private void setShortDramaCollected(View view) {
+        Setting.putShortDramaCollected(!Setting.isShortDramaCollected());
         ConfigEvent.common();
         setText();
     }

@@ -137,7 +137,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         super.onResume();
         if (mBinding.navigation.getMenu().findItem(R.id.lab).isVisible() != LabConfig.get().getNavEntry()
                 || mBinding.navigation.getMenu().findItem(R.id.following).isVisible() != FollowingSettings.isEnabled()
-                || mBinding.navigation.getMenu().findItem(R.id.drama).isVisible() != DramaSites.hasDramaSites()) setNavigation();
+                || mBinding.navigation.getMenu().findItem(R.id.drama).isVisible() != (DramaSites.hasDramaSites() && !Setting.isShortDramaCollected())) setNavigation();
         updateFollowingBadge();
     }
 
@@ -273,7 +273,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         mBinding.navigation.getMenu().findItem(R.id.vod).setVisible(true);
         mBinding.navigation.getMenu().findItem(R.id.setting).setVisible(true);
         mBinding.navigation.getMenu().findItem(R.id.lab).setVisible(LabConfig.get().getNavEntry());
-        mBinding.navigation.getMenu().findItem(R.id.drama).setVisible(DramaSites.hasDramaSites());
+        mBinding.navigation.getMenu().findItem(R.id.drama).setVisible(DramaSites.hasDramaSites() && !Setting.isShortDramaCollected());
         mBinding.navigation.getMenu().findItem(R.id.live).setVisible(LiveConfig.hasUrl());
         mBinding.navigation.getMenu().findItem(R.id.following).setVisible(FollowingSettings.isEnabled());
         updateFollowingBadge();

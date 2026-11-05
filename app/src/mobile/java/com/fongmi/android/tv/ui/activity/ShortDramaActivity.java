@@ -318,6 +318,8 @@ public class ShortDramaActivity extends BaseActivity {
 
     private void bindDetail(PageHolder holder, Vod detail, Flag flag, boolean kept) {
         holder.binding.meta.setText(getString(R.string.drama_episode_meta, 1, flag.getEpisodes().size()));
+        holder.expanded = false;
+        holder.binding.content.setMaxLines(2);
         String content = detail.getContent();
         if (!TextUtils.isEmpty(content)) {
             holder.binding.content.setText(Html.fromHtml(content, Html.FROM_HTML_MODE_LEGACY).toString().trim());
@@ -513,11 +515,17 @@ public class ShortDramaActivity extends BaseActivity {
 
     private class PageHolder extends RecyclerView.ViewHolder {
         final ItemDramaPageBinding binding;
+        boolean expanded;
 
         PageHolder(@NonNull ItemDramaPageBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }
+    }
+
+    private void toggleContent(PageHolder holder) {
+        holder.expanded = !holder.expanded;
+        holder.binding.content.setMaxLines(holder.expanded ? Integer.MAX_VALUE : 2);
     }
 
     private class PageAdapter extends RecyclerView.Adapter<PageHolder> {
@@ -528,8 +536,9 @@ public class ShortDramaActivity extends BaseActivity {
             ItemDramaPageBinding binding = ItemDramaPageBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
             PageHolder holder = new PageHolder(binding);
             binding.railKeep.setOnClickListener(view -> toggleKeep(holder.getBindingAdapterPosition()));
-            binding.railDetail.setOnClickListener(view -> openDetail(holder.getBindingAdapterPosition()));
+            binding.railDetail.setOnClickListener(view -> toggleContent(holder));
             binding.railEpisodes.setOnClickListener(view -> showEpisodes(holder.getBindingAdapterPosition()));
+            binding.content.setOnClickListener(view -> toggleContent(holder));
             binding.name.setOnClickListener(view -> openDetail(holder.getBindingAdapterPosition()));
             return holder;
         }
@@ -543,6 +552,8 @@ public class ShortDramaActivity extends BaseActivity {
             holder.binding.pageHint.setVisibility(View.GONE);
             holder.binding.name.setText(vod.getName());
             holder.binding.meta.setText(vod.getRemarks());
+            holder.expanded = false;
+            holder.binding.content.setMaxLines(2);
             holder.binding.content.setText("");
             holder.binding.railKeep.setCompoundDrawablesWithIntrinsicBounds(0, R.drawable.ic_control_keep_off, 0, 0);
             ImgUtil.load(vod.getName(), vod.getPic(), holder.binding.poster);

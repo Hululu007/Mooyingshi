@@ -412,6 +412,14 @@ public class Setting {
         Prefers.put("liquid_glass", enabled);
     }
 
+    public static boolean isShortDramaCollected() {
+        return Prefers.getBoolean("short_drama_collected", false);
+    }
+
+    public static void putShortDramaCollected(boolean collected) {
+        Prefers.put("short_drama_collected", collected);
+    }
+
     public static int getGlassBlur() {
         return Math.max(0, Math.min(40, Prefers.getInt("liquid_glass_blur", 5)));
     }
