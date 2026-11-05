@@ -88,8 +88,9 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
     private int currentPage = -1;
     private int playToken;
     private Mode mode = Mode.FEED;
-    private Site episodeSite;
-    private Vod episodeDetail;
+    private int episodePosition = -1;
+    private List<Episode> episodeList;
+    private int playingEpisodeIndex;
 
     public static void start(Activity activity) {
         activity.startActivity(new Intent(activity, ShortDramaActivity.class));
@@ -239,6 +240,7 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
     private void onPageChosen(int position) {
         if (position < 0 || position >= feed.size()) return;
         currentPage = position;
+        playingEpisodeIndex = 0;
         mBinding.pager.post(() -> attachAndResolve(position, 0));
     }
 
@@ -452,10 +454,12 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
                 if (flag == null) return;
                 List<Episode> episodes = flag.getEpisodes();
                 if (episodes.isEmpty()) return;
-                // 短剧从第 1 集开始播，网格里把第 1 集标为当前集，弹窗会自动定位到它那一页。
-                episodes.get(0).setSelected(true);
-                episodeSite = site;
-                episodeDetail = detail;
+                // 高亮当前在播的那集，弹窗会自动定位到它那一页；新翻到的剧默认播第 1 集。
+                int selected = position == currentPage ? Math.min(playingEpisodeIndex, episodes.size() - 1) : 0;
+                for (Episode episode : episodes) episode.setSelected(false);
+                episodes.get(selected).setSelected(true);
+                episodePosition = position;
+                episodeList = episodes;
                 App.post(() -> EpisodeGridDialog.create().episodes(episodes).tmdbCard(false).show(this));
             } catch (Exception ignored) {
             }
@@ -464,8 +468,70 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
 
     @Override
     public void onItemClick(Episode item) {
-        if (episodeSite == null || episodeDetail == null || item == null) return;
-        VideoActivity.start(this, episodeSite.getKey(), episodeDetail.getId(), episodeDetail.getName(), episodeDetail.getPic(), item.getName());
+        if (item == null || episodeList == null || episodePosition < 0) return;
+        int index = -1;
+        for (int i = 0; i < episodeList.size(); i++) {
+            Episode episode = episodeList.get(i);
+            if (episode != null && episode.getUrl() != null && episode.getUrl().equals(item.getUrl())) {
+                index = i;
+                break;
+            }
+        }
+        if (index < 0) return;
+        playEpisode(episodePosition, index);
+    }
+
+    /**
+     * 在短剧页当前页的视频流里换集播放，不跳本体播放器。
+     * 与 resolve 共用同一套取播放地址逻辑，换集时用 playToken 顶掉未完成的旧请求。
+     */
+    private void playEpisode(int position, int episodeIndex) {
+        if (current == null || position < 0 || position >= feed.size() || position != currentPage) return;
+        PageHolder holder = holderAt(position);
+        if (holder == null) return;
+        Vod vod = feed.get(position);
+        Site site = current;
+        int token = ++playToken;
+        holder.binding.pageLoading.setVisibility(View.VISIBLE);
+        holder.binding.pageHint.setVisibility(View.GONE);
+        Task.executor().submit(() -> {
+            try {
+                Vod detail = detailOf(site, vod);
+                Flag flag = detail == null ? null : firstFlag(detail);
+                if (flag == null || episodeIndex < 0 || episodeIndex >= flag.getEpisodes().size()) {
+                    failPage(token, holder, R.string.drama_load_failed);
+                    return;
+                }
+                Episode episode = flag.getEpisodes().get(episodeIndex);
+                Result playerResult = SiteApi.playerContent(site.getKey(), flag.getFlag(), episode.getUrl());
+                if (playerResult != null && (Integer.valueOf(1).equals(playerResult.getParse()) || Integer.valueOf(1).equals(playerResult.getJx()))) {
+                    App.post(() -> {
+                        if (token != playToken) return;
+                        holder.binding.pageLoading.setVisibility(View.GONE);
+                        holder.binding.pageHint.setText(R.string.drama_need_parse);
+                        holder.binding.pageHint.setVisibility(View.VISIBLE);
+                    });
+                    return;
+                }
+                String url = playerResult == null || playerResult.getUrl() == null ? "" : playerResult.getUrl().v();
+                if (TextUtils.isEmpty(url)) {
+                    failPage(token, holder, R.string.drama_load_failed);
+                    return;
+                }
+                Map<String, String> headers = playerResult.getHeader();
+                recordHistory(site, detail, flag, episode);
+                int index = episodeIndex;
+                int total = flag.getEpisodes().size();
+                App.post(() -> {
+                    if (token != playToken) return;
+                    playingEpisodeIndex = index;
+                    holder.binding.meta.setText(getString(R.string.drama_episode_meta, index + 1, total));
+                    playUrl(url, headers);
+                });
+            } catch (Exception e) {
+                failPage(token, holder, R.string.drama_load_failed);
+            }
+        });
     }
 
     // --- modes ----------------------------------------------------------
