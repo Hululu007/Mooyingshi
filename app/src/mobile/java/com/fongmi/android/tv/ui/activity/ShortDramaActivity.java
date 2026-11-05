@@ -43,7 +43,9 @@ import com.fongmi.android.tv.databinding.ItemDramaHistoryBinding;
 import com.fongmi.android.tv.databinding.ItemDramaPageBinding;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.drama.DramaSites;
+import com.fongmi.android.tv.ui.adapter.EpisodeAdapter;
 import com.fongmi.android.tv.ui.base.BaseActivity;
+import com.fongmi.android.tv.ui.dialog.EpisodeGridDialog;
 import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.Task;
 
@@ -65,7 +67,7 @@ import java.util.Map;
  * detail/episode work, is handed to the existing VideoActivity, whose
  * short-drama mode already covers speed memory and auto-advance.
  */
-public class ShortDramaActivity extends BaseActivity {
+public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.OnClickListener {
 
     private static final int COLOR_ACCENT = 0xFFFF7A29;
     private static final int COLOR_TAB = 0xFFFFFFFF;
@@ -86,6 +88,8 @@ public class ShortDramaActivity extends BaseActivity {
     private int currentPage = -1;
     private int playToken;
     private Mode mode = Mode.FEED;
+    private Site episodeSite;
+    private Vod episodeDetail;
 
     public static void start(Activity activity) {
         activity.startActivity(new Intent(activity, ShortDramaActivity.class));
@@ -447,16 +451,21 @@ public class ShortDramaActivity extends BaseActivity {
                 Flag flag = detail == null ? null : firstFlag(detail);
                 if (flag == null) return;
                 List<Episode> episodes = flag.getEpisodes();
-                String[] names = new String[episodes.size()];
-                for (int i = 0; i < episodes.size(); i++) names[i] = episodes.get(i).getName();
-                App.post(() -> new AlertDialog.Builder(this)
-                        .setTitle(detail.getName())
-                        .setItems(names, (dialog, which) -> VideoActivity.start(this, site.getKey(), detail.getId(), detail.getName(), detail.getPic(), episodes.get(which).getName()))
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .show());
+                if (episodes.isEmpty()) return;
+                // 短剧从第 1 集开始播，网格里把第 1 集标为当前集，弹窗会自动定位到它那一页。
+                episodes.get(0).setSelected(true);
+                episodeSite = site;
+                episodeDetail = detail;
+                App.post(() -> EpisodeGridDialog.create().episodes(episodes).tmdbCard(false).show(this));
             } catch (Exception ignored) {
             }
         });
+    }
+
+    @Override
+    public void onItemClick(Episode item) {
+        if (episodeSite == null || episodeDetail == null || item == null) return;
+        VideoActivity.start(this, episodeSite.getKey(), episodeDetail.getId(), episodeDetail.getName(), episodeDetail.getPic(), item.getName());
     }
 
     // --- modes ----------------------------------------------------------
