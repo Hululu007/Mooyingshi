@@ -156,6 +156,9 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
                     activeHolder.binding.pageLoading.setVisibility(View.GONE);
                     activeHolder.binding.poster.setVisibility(View.GONE);
                 }
+                if (state == Player.STATE_ENDED) {
+                    onVideoEnded();
+                }
             }
 
             @Override
@@ -479,6 +482,35 @@ public class ShortDramaActivity extends BaseActivity implements EpisodeAdapter.O
         }
         if (index < 0) return;
         playEpisode(episodePosition, index);
+    }
+
+    /**
+     * 当前集播完后自动播下一集：同部剧还有下一集就在视频流内换集播；
+     * 已是最后一集就自动滑到下一部剧；已是最后一部则停住。
+     */
+    private void onVideoEnded() {
+        if (mode != Mode.FEED || current == null || currentPage < 0 || currentPage >= feed.size()) return;
+        if (activeHolder == null) return;
+        int position = currentPage;
+        Vod vod = feed.get(position);
+        Site site = current;
+        Task.executor().submit(() -> {
+            try {
+                Vod detail = detailOf(site, vod);
+                Flag flag = detail == null ? null : firstFlag(detail);
+                if (flag == null) return;
+                int next = playingEpisodeIndex + 1;
+                if (next < flag.getEpisodes().size()) {
+                    App.post(() -> playEpisode(position, next));
+                } else if (position + 1 < feed.size()) {
+                    App.post(() -> {
+                        if (position != currentPage) return;
+                        mBinding.pager.setCurrentItem(position + 1, true);
+                    });
+                }
+            } catch (Exception ignored) {
+            }
+        });
     }
 
     /**
