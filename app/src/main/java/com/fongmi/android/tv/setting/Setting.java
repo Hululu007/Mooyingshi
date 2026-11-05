@@ -413,7 +413,7 @@ public class Setting {
     }
 
     public static boolean isShortDramaCollected() {
-        return Prefers.getBoolean("short_drama_collected", false);
+        return Prefers.getBoolean("short_drama_collected", true);
     }
 
     public static void putShortDramaCollected(boolean collected) {
