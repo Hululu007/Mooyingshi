@@ -730,6 +730,14 @@ public class Setting {
         if (debugLog) logDebugEnvironment("enable");
     }
 
+    public static boolean isSearchCurrentSiteDefault() {
+        return Prefers.getBoolean("search_current_site_default", false);
+    }
+
+    public static void putSearchCurrentSiteDefault(boolean value) {
+        Prefers.put("search_current_site_default", value);
+    }
+
     public static void logDebugEnvironment(String reason) {
         boolean hardwareAccelerated = (App.get().getApplicationInfo().flags & ApplicationInfo.FLAG_HARDWARE_ACCELERATED) != 0;
         DebugLogStore.event(new com.github.catvod.crawler.diagnostics.DiagnosticEvent("env.device", "none", "process", 0, 0)

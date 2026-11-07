@@ -308,6 +308,7 @@
     <string name="repo_github">GitHub 仓库</string>
     <string name="repo_cnb">CNB 仓库</string>
     <string name="setting_debug_log">调试日志</string>
+    <string name="setting_search_current_site">默认搜索本站</string>
     <string name="setting_manage_page">管理页面</string>
     <string name="setting_remote_trust">远程托管</string>
     <string name="setting_git_cloud">Git 云盘</string>

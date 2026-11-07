@@ -311,6 +311,7 @@
     <string name="repo_github">GitHub repository</string>
     <string name="repo_cnb">CNB repository</string>
     <string name="setting_debug_log">Debug log</string>
+    <string name="setting_search_current_site">Default search current site</string>
     <string name="setting_manage_page">Management page</string>
     <string name="setting_remote_trust">Remote trust</string>
     <string name="setting_git_cloud">Git cloud drive</string>
